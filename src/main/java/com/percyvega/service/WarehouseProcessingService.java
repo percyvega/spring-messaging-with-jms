@@ -24,9 +24,25 @@ public class WarehouseProcessingService {
     }
 
     @Transactional
-    public void processBookOrder(BookOrder bookOrder) {
+    public void processBookOrder(BookOrder bookOrder, String orderStatus, String storeId) {
+        log.info("WarehouseProcessingService.processBookOrder: orderStatus={}, storeId={}", orderStatus, storeId);
         log.info("WarehouseProcessingService.processBookOrder: {}", bookOrder);
         ProcessedBookOrder processedBookOrder = new ProcessedBookOrder(bookOrder, new Date(), new Date());
+
+        switch (orderStatus) {
+            case "NEW":
+                log.info("**ADDING A NEW RECORD TO THE DATABASE**");
+                break;
+            case "UPDATE":
+                log.info("**UPDATING A RECORD IN THE DATABASE**");
+                break;
+            case "DELETE":
+                log.info("**DELETING A RECORD FROM THE DATABASE**");
+                break;
+            default:
+                throw new RuntimeException(String.format("Unknown orderStatus: %s", orderStatus));
+        }
+
         jmsTemplate.convertAndSend(BOOK_ORDER_PROCESSED_QUEUE, processedBookOrder);
         log.info("WarehouseProcessingService processed book order: {}", processedBookOrder);
     }

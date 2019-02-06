@@ -1,5 +1,6 @@
 package com.percyvega;
 
+import com.percyvega.listener.BookOrderProcessingMessageListener;
 import lombok.extern.log4j.Log4j2;
 import org.apache.activemq.ActiveMQConnectionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,7 +8,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jms.annotation.EnableJms;
+import org.springframework.jms.annotation.JmsListenerConfigurer;
 import org.springframework.jms.config.DefaultJmsListenerContainerFactory;
+import org.springframework.jms.config.JmsListenerEndpointRegistrar;
+import org.springframework.jms.config.SimpleJmsListenerEndpoint;
 import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.connection.JmsTransactionManager;
 import org.springframework.jms.connection.SingleConnectionFactory;
@@ -24,7 +28,7 @@ import javax.jms.ConnectionFactory;
 @EnableTransactionManagement
 @EnableJms
 @Configuration
-public class JmsConfig /*implements JmsListenerConfigurer*/ {
+public class JmsConfig implements JmsListenerConfigurer {
 
     @Value("${spring.activemq.broker-url}")
     private String brokerUrl;
@@ -53,7 +57,7 @@ public class JmsConfig /*implements JmsListenerConfigurer*/ {
     }
 
     @Bean
-    public DefaultJmsListenerContainerFactory jmsListenerContainerFactory(){
+    public DefaultJmsListenerContainerFactory jmsListenerContainerFactory() {
         DefaultJmsListenerContainerFactory factory = new DefaultJmsListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory());
         factory.setMessageConverter(mappingJackson2MessageConverter());
@@ -77,22 +81,22 @@ public class JmsConfig /*implements JmsListenerConfigurer*/ {
         jmsTemplate.setSessionTransacted(true);
         return jmsTemplate;
     }
-//
-//    @Bean
-//    public BookOrderProcessingMessageListener jmsMessageListener() {
-//        BookOrderProcessingMessageListener listener = new BookOrderProcessingMessageListener();
-//        return listener;
-//    }
-//
-//    @Override
-//    public void configureJmsListeners(JmsListenerEndpointRegistrar registrar) {
-//        SimpleJmsListenerEndpoint endpoint = new SimpleJmsListenerEndpoint();
-//        endpoint.setMessageListener(jmsMessageListener());
-//        endpoint.setDestination("book.order.processed.queue");
-//        endpoint.setId("book-order-processed-queue");
-//        endpoint.setSubscription("my-subscription");
-//        endpoint.setConcurrency("1");
-//        registrar.setContainerFactory(jmsListenerContainerFactory());
-//        registrar.registerEndpoint(endpoint, jmsListenerContainerFactory());
-//    }
+
+    @Bean
+    public BookOrderProcessingMessageListener jmsMessageListener() {
+        BookOrderProcessingMessageListener listener = new BookOrderProcessingMessageListener();
+        return listener;
+    }
+
+    @Override
+    public void configureJmsListeners(JmsListenerEndpointRegistrar registrar) {
+        SimpleJmsListenerEndpoint endpoint = new SimpleJmsListenerEndpoint();
+        endpoint.setMessageListener(jmsMessageListener());
+        endpoint.setDestination("book.order.processed.queue");
+        endpoint.setId("book-order-processed-queue");
+        endpoint.setSubscription("my-subscription");
+        endpoint.setConcurrency("1");
+        registrar.setContainerFactory(jmsListenerContainerFactory());
+        registrar.registerEndpoint(endpoint, jmsListenerContainerFactory());
+    }
 }

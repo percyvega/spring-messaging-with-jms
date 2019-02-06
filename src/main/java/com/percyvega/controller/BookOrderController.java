@@ -6,10 +6,7 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @Log4j2
 @RestController
@@ -18,15 +15,19 @@ public class BookOrderController {
 
     private final BookOrderService bookOrderService;
 
+    private static final String ORDER_STATUS = "NEW";
+
     @Autowired
     public BookOrderController(BookOrderService bookOrderService) {
         this.bookOrderService = bookOrderService;
     }
 
-    @PostMapping
-    public ResponseEntity<BookOrder> createBookOrder(@RequestBody BookOrder bookOrder) {
+    @PostMapping("/{storeId}")
+    public ResponseEntity<BookOrder> createBookOrder(
+            @RequestBody BookOrder bookOrder,
+            @PathVariable String storeId) {
         log.info("BookOrderController.createBookOrder: {}", bookOrder);
-        bookOrderService.send(bookOrder);
+        bookOrderService.send(bookOrder, storeId, ORDER_STATUS);
         log.info("BookOrderController created: {}", bookOrder);
         return new ResponseEntity<>(bookOrder, HttpStatus.CREATED);
     }
