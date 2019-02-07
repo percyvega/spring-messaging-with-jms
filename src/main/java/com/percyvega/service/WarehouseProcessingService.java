@@ -1,50 +1,51 @@
 package com.percyvega.service;
 
-import com.percyvega.dto.BookOrder;
-import com.percyvega.dto.ProcessedBookOrder;
+import com.percyvega.common.BookOrder;
+import com.percyvega.common.BookOrderStatus;
+import com.percyvega.common.ProcessedBookOrder;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jms.core.JmsTemplate;
+import org.springframework.messaging.Message;
+import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+
+import static com.percyvega.common.BookOrderStatus.*;
 
 @Log4j2
 @Service
 public class WarehouseProcessingService {
 
-    private static final String BOOK_ORDER_PROCESSED_QUEUE = "book.order.processed.queue";
+    public Message<ProcessedBookOrder> processBookOrder(BookOrder bookOrder, String orderStatus) {
+        log.info("WarehouseProcessingService.processBookOrder: orderStatus={}, bookOrder={}", orderStatus, bookOrder);
 
-    private final JmsTemplate jmsTemplate;
-
-    @Autowired
-    public WarehouseProcessingService(JmsTemplate jmsTemplate) {
-        this.jmsTemplate = jmsTemplate;
-    }
-
-    @Transactional
-    public void processBookOrder(BookOrder bookOrder, String orderStatus, String storeId) {
-        log.info("WarehouseProcessingService.processBookOrder: orderStatus={}, storeId={}", orderStatus, storeId);
-        log.info("WarehouseProcessingService.processBookOrder: {}", bookOrder);
-        ProcessedBookOrder processedBookOrder = new ProcessedBookOrder(bookOrder, new Date(), new Date());
-
-        switch (orderStatus) {
-            case "NEW":
-                log.info("**ADDING A NEW RECORD TO THE DATABASE**");
+        ProcessedBookOrder processedBookOrder;
+        switch (BookOrderStatus.valueOf(orderStatus)) {
+            case CREATE:
+                processedBookOrder = new ProcessedBookOrder(bookOrder, new Date(), new Date());
+                orderStatus = CREATED.name();
+                log.info("**ADDING A CREATE RECORD TO THE DATABASE**");
                 break;
-            case "UPDATE":
+            case UPDATE:
+                processedBookOrder = new ProcessedBookOrder(bookOrder, new Date(), new Date());
+                orderStatus = UPDATED.name();
                 log.info("**UPDATING A RECORD IN THE DATABASE**");
                 break;
-            case "DELETE":
+            case DELETE:
+                processedBookOrder = new ProcessedBookOrder(bookOrder, new Date(), null);
+                orderStatus = DELETED.name();
                 log.info("**DELETING A RECORD FROM THE DATABASE**");
                 break;
             default:
-                throw new RuntimeException(String.format("Unknown orderStatus: %s", orderStatus));
+                throw new IllegalArgumentException(String.format("Unknown orderStatus: %s", orderStatus));
         }
 
-        jmsTemplate.convertAndSend(BOOK_ORDER_PROCESSED_QUEUE, processedBookOrder);
-        log.info("WarehouseProcessingService processed book order: {}", processedBookOrder);
+        log.info("WarehouseProcessingService processed book order.");
+
+        return MessageBuilder
+                .withPayload(processedBookOrder)
+                .setHeader("orderStatus", orderStatus)
+                .build();
     }
 
 }

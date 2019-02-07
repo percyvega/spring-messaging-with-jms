@@ -1,4 +1,4 @@
-package com.percyvega.dto;
+package com.percyvega.common;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
